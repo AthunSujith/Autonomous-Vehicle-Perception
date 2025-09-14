@@ -1,0 +1,25 @@
+# Core deep learning
+torch>=2.0.0
+torchvision>=0.15.0
+
+# Object detection frameworks
+ultralytics>=8.0.0   # YOLOv8 package (training & inference)
+# Detectron2 must match your torch+cuda version (see notes below)
+
+# Utilities
+opencv-python>=4.8.0   # image & video I/O
+pycocotools>=2.0.7     # COCO evaluation metrics
+matplotlib>=3.7.0      # plots & PR curves
+pandas>=2.0.0          # tabular summaries
+tqdm>=4.65.0           # progress bars
+
+# Optional for visualization
+jupyterlab
+streamlit
+
+
+ultralytics
+streamlit
+pillow
+numpy
+pandas

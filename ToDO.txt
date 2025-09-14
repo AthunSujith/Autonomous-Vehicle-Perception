@@ -1,0 +1,213 @@
+# Autonomous Vehicle Perception (Mini Simulation)
+
+**Goal:** Train and evaluate object detection models (cars, pedestrians, traffic signs) on dashcam/urban driving datasets and run a minimal simulation pipeline for qualitative checks.
+
+**Why:** Practical, career-relevant project showing computer vision, deep learning, and system integration (data → model → evaluation → demo).
+
+---
+
+## Project deliverables
+
+1. Data pipeline: download, convert, and preprocess dataset (annotations in COCO/Pascal VOC format).
+2. Training scripts for at least two detector families: a YOLO (efficient single-stage) and a Detectron2 (Faster R-CNN / Mask R-CNN if desired).
+3. Evaluation: mAP, precision/recall, confusion matrix, per-class AP.
+4. Minimal visualization/demo: run inference on sample dashcam video and produce annotated video frames; optionally integrate with CARLA or a simple local simulator to visualize detections.
+5. README and short report with results, failure cases, and next steps.
+
+---
+
+## Recommended datasets (download & usage)
+
+> Pick one primary dataset for speed (smaller) and one for final evaluation (larger):
+
+* **KITTI** — classical driving dataset (bounding boxes for cars, pedestrians, cyclists). Good for initial experiments.
+* **BDD100K** — large and diverse dashcam dataset with multiple conditions (day/night, weather). Good for robust training/eval.
+* **Cityscapes** — high-quality urban scenes; often used for segmentation but has detection annotations and is useful for urban scenarios.
+
+*Tip:* Start with KITTI for quick iteration, then scale to BDD100K for robustness.
+
+---
+
+## Environment & tools
+
+* Python 3.9+ (conda recommended)
+* PyTorch (1.13+ or matching Detectron/YOLO reqs)
+* Detectron2 (from Facebook/Meta) for region-based detectors
+* YOLOv5 or YOLOv8 (Ultralytics) for fast single-stage detectors
+* OpenCV for visualization and video I/O
+* COCO API for evaluation and metrics
+* Optional: CARLA simulator (if you want a live sim) or simple prerecorded video demo
+
+---
+
+## Data pipeline (steps)
+
+1. Download dataset(s). Place raw images in `data/raw/<dataset>/images/` and annotations in `data/raw/<dataset>/annotations/`.
+2. Convert annotations to COCO format if not already provided. Provide `convert_<dataset>.py` scripts.
+3. Split: train/val/test (typical split: 70/20/10 or use official splits).
+4. Resize images (keep aspect ratio) or use mixed-size training depending on detector.
+5. Augmentations: random horizontal flip, photometric distortions (brightness/contrast), random scale/crop, Cutout / Mosaic (YOLO-style) for robustness.
+6. Create a lightweight dataloader that streams from disk and caches metadata.
+
+Files to include:
+
+* `scripts/convert_kitti_to_coco.py`
+* `datasets/loader.py` (dataset wrapper returning images and COCO-format dicts)
+* `notebooks/visualize_dataset.ipynb`
+
+---
+
+## Model choices & config suggestions
+
+**YOLO (Ultralytics)**
+
+* YOLOv5 or YOLOv8: choose a small variant for iteration (`nano`/`s`), then scale up.
+* Use transfer learning from COCO weights.
+* Use Mosaic augmentation, AdamW or SGD with warmup, cosine annealing LR or step LR.
+* Typical hyperparams: batch 16 (adjust to GPU), lr = 1e-3 (tune), epochs 50–120.
+
+**Detectron2 (Faster R-CNN)**
+
+* Start with `R50-FPN` backbone, pretrained on COCO.
+* Use standard configs from Detectron2, adjust `SOLVER.BASE_LR`, `IMS_PER_BATCH`, `MAX_ITER` according to dataset size.
+* Optionally try `RetinaNet` or `Mask R-CNN` for segmentation extension.
+
+---
+
+## Training pipeline (commands & scripts)
+
+Suggested project layout:
+
+```
+project/
+  data/
+    raw/
+    processed/
+  models/
+  notebooks/
+  scripts/
+    convert_kitti_to_coco.py
+    train_yolo.py
+    train_detectron.py
+  utils/
+    augmentations.py
+    eval.py
+  outputs/
+    runs/
+```
+
+### Example: YOLO (Ultralytics) training command
+
+```
+# using Ultralytics CLI after preparing a yaml dataconfig
+yolo train model=yolov8n.pt data=data/kitti.yaml epochs=80 imgsz=640 batch=16 device=0
+```
+
+### Example: Detectron2 training snippet (python)
+
+```python
+from detectron2.engine import DefaultTrainer
+from detectron2.config import get_cfg
+from detectron2 import model_zoo
+
+cfg = get_cfg()
+cfg.merge_from_file(model_zoo.get_config_file("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml"))
+cfg.DATASETS.TRAIN = ("kitti_train",)
+cfg.DATASETS.TEST = ("kitti_val",)
+cfg.DATALOADER.NUM_WORKERS = 4
+cfg.SOLVER.IMS_PER_BATCH = 8
+cfg.SOLVER.BASE_LR = 0.0025
+cfg.SOLVER.MAX_ITER = 20000
+cfg.MODEL.WEIGHTS = model_zoo.get_checkpoint_url("COCO-Detection/faster_rcnn_R_50_FPN_3x.yaml")
+
+trainer = DefaultTrainer(cfg)
+trainer.resume_or_load(resume=False)
+trainer.train()
+```
+
+---
+
+## Evaluation & metrics
+
+* **mAP\@0.5 (AP50)** and **mAP@\[0.5:0.95]** (COCO standard)
+* Precision / Recall per class
+* PR curves and per-class AP bars
+* Confusion matrix for object classes and common false positives
+* Error analysis: categorize missed detections by occlusion, scale, illumination, and annotation errors
+
+Provide `utils/eval.py` which computes and plots these metrics using the COCO API.
+
+---
+
+## Augmentation & domain adaptation ideas
+
+* Photometric augmentations for night/day robustness
+* Sim2Real: use CARLA to render additional labeled images under varied weather/time
+* Fine-tune on hard negatives (hard example mining)
+
+---
+
+## Visualization / Demo
+
+* Script `inference_demo.py` to run a model on a video and save annotated frames or stitched video.
+* Optionally prepare a simple dashboard (Streamlit) to toggle models and thresholds and view results.
+
+Example inference command:
+
+```
+python inference_demo.py --weights runs/yolov8n/weights/best.pt --video sample_dashcam.mp4 --out results/annotated.mp4
+```
+
+---
+
+## Hardware & runtime expectations
+
+* Small models (YOLO tiny/n): can train on a single GPU (e.g., 8-12GB) for tens of epochs in a few hours for KITTI-sized dataset.
+* Larger models / full BDD100K training recommended on 1–4 GPUs or cloud instances.
+
+---
+
+## Timeline (mini schedule for a 1–2 week mini-project)
+
+* Day 1: Project scaffolding, dataset download & conversion, quick EDA and visualization.
+* Day 2–3: Implement dataloaders, light augmentation, train small YOLO model for quick iterations.
+* Day 4–5: Train Detectron2 baseline and compare metrics; tune augmentations.
+* Day 6: Run evaluation (mAP, PR curves), produce visualizations, and write report.
+* Day 7+: Optional simulation demo using CARLA, extend to segmentation or instance segmentation.
+
+---
+
+## Quick risk & mitigation
+
+* **Risk:** Long training times. **Mitigation:** use small models and subset of data for iteration; use pretrained checkpoints.
+* **Risk:** Annotation format mismatches. **Mitigation:** robust conversion scripts and small unit tests to validate conversions.
+
+---
+
+## Example utility functions (skeletons)
+
+`datasets/convert_kitti_to_coco.py` — skeleton snippet:
+
+```python
+# Reads KITTI label files and creates COCO json with categories: car, pedestrian, cyclist
+# Save as data/processed/kitti_coco.json
+```
+
+`inference_demo.py` — skeleton snippet:
+
+```python
+# loads a weights file, runs inference on video frames with OpenCV, draws boxes and labels, writes out a video
+```
+
+---
+
+## Next steps I can do for you (choose one or more)
+
+1. Prepare the dataset conversion scripts (KITTI → COCO) and a small sample subset ready to train.
+2. Produce a full YOLOv8 training script and a ready-to-run `data/kitti.yaml` config.
+3. Produce a Detectron2 training script and registration code for the converted dataset.
+4. Implement `inference_demo.py` and a Streamlit dashboard for visualizing results.
+
+---
+
+**Notes:** This document contains the full plan, commands, and code skeletons you can run locally. If you want, I can start implementing one of the next steps above right away — tell me which one and I will generate the code files and commands.

@@ -1,0 +1,168 @@
+project_root/
+│
+├── data/
+│   ├── raw/
+│   │   └── kitti/
+│   │       ├── images/          # unzipped from data_object_image_2.zip
+│   │       │   ├── 000000.png
+│   │       │   ├── 000001.png
+│   │       │   └── ...
+│   │       └── labels/          # unzipped from data_object_label_2.zip
+│   │           ├── 000000.txt
+│   │           ├── 000001.txt
+│   │           └── ...
+│   │
+│   ├── processed/
+│   │   ├── images/
+│   │   │   ├── train/           # training images after split
+│   │   │   ├── val/             # validation images
+│   │   │   └── test/            # test images
+│   │   └── annotations/
+│   │       ├── kitti_coco.json          # full json (all images)
+│   │       ├── kitti_coco_train.json    # split json
+│   │       ├── kitti_coco_val.json
+│   │       └── kitti_coco_test.json
+│   │
+│   └── sample/                  # optional 200-image subset for quick debugging
+│
+├── scripts/
+│   ├── convert_kitti_to_coco.py
+│   ├── split_coco.py
+│   ├── train_yolov8.sh
+│   ├── train_detectron.py
+│   ├── register_coco_dataset.py
+│   └── inference_demo.py
+│
+├── utils/
+│   ├── eval_coco.py
+│   └── visualize.py
+│
+├── outputs/
+│   ├── runs/          # YOLO training outputs
+│   ├── detectron2_kitti/   # Detectron2 outputs
+│   └── vis/           # visualizations / annotated samples
+│
+├── notebooks/
+│   └── visualize_dataset.ipynb
+│
+├── requirements.txt
+└── README.md
+
+🚗 Autonomous Vehicle Perception (Mini Simulation)
+1. Project Overview
+
+This project builds a computer vision pipeline that allows a machine (like a self-driving car) to detect objects in its environment (cars, pedestrians, traffic signs, etc.) using deep learning.
+
+We simulate the perception system of a self-driving car by:
+
+Training a YOLO (You Only Look Once) object detection model.
+
+Using a benchmark dataset (KITTI or COCO-style) of real road scenes.
+
+Creating a demo app (Streamlit) that allows inference on images, videos, or live webcam streams.
+
+2. Why This Project is Used
+
+Self-Driving Cars: Object detection is the foundation of autonomous navigation. Without detecting other vehicles, pedestrians, or traffic signs, a car cannot make safe decisions.
+
+AI Career Skills: YOLO and CNN-based detection are industry-standard. Learning them makes you job-ready for roles in computer vision, AI engineering, robotics, and ADAS (Advanced Driver Assistance Systems).
+
+Practical Simulation: Even though we are not controlling a real car, this project simulates the “eyes” of a self-driving system. That’s why it’s called a mini simulation.
+
+Transferable Knowledge: The same perception system is used in drones, surveillance, robotics, and industrial automation.
+
+3. Key Components
+🔹 (A) Dataset — KITTI Benchmark
+
+What it is: KITTI contains thousands of road scene images with labeled bounding boxes (cars, cyclists, pedestrians, etc.).
+
+Why: This is one of the most widely used datasets for training self-driving perception models, ensuring our project is realistic.
+
+How we use it: We download it, process annotations into YOLO format (images + labels), and feed it into our training pipeline.
+
+🔹 (B) Model — YOLOv8
+
+What it is: YOLO (You Only Look Once) is a family of real-time object detectors.
+
+Why YOLOv8:
+
+State-of-the-art accuracy and speed.
+
+Works on both CPU and GPU.
+
+Supports multiple export formats (TorchScript, ONNX, TensorRT).
+
+How we use it:
+
+Start with a pretrained YOLO (on COCO dataset).
+
+Fine-tune it on KITTI data.
+
+Save best weights (best.pt).
+
+🔹 (C) Training
+
+Steps:
+
+Define data.yaml (paths to train/val images + class names).
+
+Train with yolo task=detect mode=train model=yolov8n.pt data=data/kitti.yaml.
+
+Validate performance (mAP, precision, recall).
+
+Why: Training ensures the model adapts to road-specific objects instead of generic COCO categories.
+
+🔹 (D) Deployment & Demo App
+
+We created a Streamlit demo app with three modes:
+
+Image mode → upload an image → see bounding boxes + labels.
+
+Video mode → upload a video → run detection on frames.
+
+Webcam mode → live detection (simulating a dashcam).
+
+Why: This makes the project interactive and easy to showcase (interview-ready).
+
+How: Streamlit provides a simple Python interface for UI, while YOLO runs inference behind the scenes.
+
+4. Project Workflow
+
+Environment setup → requirements.txt, virtualenv, install YOLO.
+Why: Ensures reproducibility.
+
+Data prep → download KITTI, unzip, convert annotations to YOLO format.
+Why: Models need correctly structured datasets.
+
+Train model → fine-tune YOLOv8.
+Why: Transfer learning reduces training time and increases accuracy.
+
+Evaluate model → check precision/recall/mAP.
+Why: Verify it generalizes well.
+
+Deploy model → create demo app (image/video/live).
+Why: Make it user-friendly and real-world-like.
+
+5. Why Recruiters & Industry Care
+
+✅ Demonstrates end-to-end AI project skills: dataset handling → training → deployment.
+
+✅ Relevant to high-demand fields: self-driving, robotics, smart cameras.
+
+✅ Uses real-world benchmark datasets: KITTI is respected in academia and industry.
+
+✅ Showcases model deployment ability: Employers want engineers who can deploy, not just train models.
+
+✅ Portfolio-ready: The demo app is interactive and can be shown in an interview.
+
+6. Extensions / Next Steps
+
+Add semantic segmentation (road lanes, drivable area).
+
+Add tracking (follow objects frame by frame).
+
+Export model to ONNX / TensorRT for edge deployment.
+
+Integrate into a ROS (Robot Operating System) simulation for robotics.
+
+Connect to a simulated driving environment (CARLA simulator).
